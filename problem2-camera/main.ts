@@ -14,6 +14,12 @@ function canCoverRequirements(
 ): boolean {
   if (hardwareCameras.length === 0) return false;
 
+  const hasInvalidRange = ({ distance, lightLevel }: CameraSpec) =>
+    distance.min > distance.max || lightLevel.min > lightLevel.max;
+
+  if (hasInvalidRange(softwareCamera) || hardwareCameras.some(hasInvalidRange))
+    return false;
+
   const allCameras = [softwareCamera, ...hardwareCameras];
 
   const distanceBounds = getBoundaries(
@@ -152,6 +158,39 @@ function runTests() {
         { distance: { min: 0, max: 10 }, lightLevel: { min: 0, max: 100 } },
       ],
       expected: true,
+    },
+    {
+      name: "Single-point software range",
+      software: {
+        distance: { min: 5, max: 5 },
+        lightLevel: { min: 50, max: 50 },
+      },
+      hardware: [
+        { distance: { min: 0, max: 10 }, lightLevel: { min: 0, max: 100 } },
+      ],
+      expected: true,
+    },
+    {
+      name: "Inverted software range",
+      software: {
+        distance: { min: 10, max: 0 },
+        lightLevel: { min: 0, max: 100 },
+      },
+      hardware: [
+        { distance: { min: 0, max: 10 }, lightLevel: { min: 0, max: 100 } },
+      ],
+      expected: false,
+    },
+    {
+      name: "Inverted hardware range",
+      software: {
+        distance: { min: 0, max: 10 },
+        lightLevel: { min: 0, max: 100 },
+      },
+      hardware: [
+        { distance: { min: 10, max: 0 }, lightLevel: { min: 0, max: 100 } },
+      ],
+      expected: false,
     },
     {
       name: "Missing corner coverage",
