@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy } from "@angular/core";
-import { Observable, interval, of } from "rxjs";
+import { Observable, timer, of } from "rxjs";
 import {
   switchMap,
   map,
@@ -75,25 +75,28 @@ export class CountdownTimerComponent {
   readonly state$: Observable<CountdownState>;
 
   constructor(private readonly deadlineService: DeadlineService) {
+    const loading: CountdownState = { secondsLeft: null, error: false };
+    const error: CountdownState = { secondsLeft: null, error: true };
+
     this.state$ = this.deadlineService.getDeadline().pipe(
-      switchMap((response) =>
-        interval(1000).pipe(
-          map((tick) => ({
-            secondsLeft: Math.max(0, response.secondsLeft - tick - 1),
+      switchMap((response) => {
+        const deadlineMs = Date.now() + response.secondsLeft * 1000;
+        return timer(0, 1000).pipe(
+          map(() => ({
+            secondsLeft: Math.max(
+              0,
+              Math.round((deadlineMs - Date.now()) / 1000),
+            ),
             error: false,
           })),
-          takeWhile((state) => state.secondsLeft > 0, true),
-          startWith({
-            secondsLeft: Math.max(0, response.secondsLeft),
-            error: false,
-          }),
-        ),
-      ),
+          takeWhile((s) => s.secondsLeft > 0, true),
+        );
+      }),
       catchError((err) => {
         console.error("Failed to load deadline:", err);
-        return of({ secondsLeft: null, error: true });
+        return of(error);
       }),
-      startWith({ secondsLeft: null, error: false }),
+      startWith(loading),
     );
   }
 }
