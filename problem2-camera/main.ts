@@ -30,11 +30,8 @@ function canCoverRequirements(
     (b) => isPointInRange(b, softwareCamera.lightLevel),
   );
 
-  for (let i = 0; i < distanceBounds.length - 1; i++) {
-    for (let j = 0; j < lightBounds.length - 1; j++) {
-      const cellDist = (distanceBounds[i] + distanceBounds[i + 1]) / 2;
-      const cellLight = (lightBounds[j] + lightBounds[j + 1]) / 2;
-
+  for (const cellDist of getCellMidpoints(distanceBounds)) {
+    for (const cellLight of getCellMidpoints(lightBounds)) {
       const isCovered = hardwareCameras.some(
         (c) =>
           isPointInRange(cellDist, c.distance) &&
@@ -58,6 +55,11 @@ function getBoundaries(ranges: CameraRange[]): number[] {
   }
 
   return Array.from(boundaries).sort((a, b) => a - b);
+}
+
+function getCellMidpoints(bounds: number[]): number[] {
+  if (bounds.length <= 1) return bounds;
+  return bounds.slice(1).map((b, i) => (bounds[i] + b) / 2);
 }
 
 function isPointInRange(point: number, range: CameraRange): boolean {
@@ -160,7 +162,7 @@ function runTests() {
       expected: true,
     },
     {
-      name: "Single-point software range",
+      name: "Single-point software range (covered)",
       software: {
         distance: { min: 5, max: 5 },
         lightLevel: { min: 50, max: 50 },
@@ -169,6 +171,17 @@ function runTests() {
         { distance: { min: 0, max: 10 }, lightLevel: { min: 0, max: 100 } },
       ],
       expected: true,
+    },
+    {
+      name: "Single-point software range (not covered)",
+      software: {
+        distance: { min: 5, max: 5 },
+        lightLevel: { min: 50, max: 50 },
+      },
+      hardware: [
+        { distance: { min: 0, max: 3 }, lightLevel: { min: 0, max: 30 } },
+      ],
+      expected: false,
     },
     {
       name: "Inverted software range",
